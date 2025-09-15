@@ -1,3 +1,4 @@
+import 'package:currency_tracker/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
@@ -41,16 +42,36 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
         // Carrossel fixo no topo
         Watch(
           (context) {
-            if (viewController.isExecuting.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
+            var currencies = viewController.currencies.value;
+
+            // if (viewController.isExecuting.value) {
+            //   return const Center(child: CircularProgressIndicator());
+            // }
 
             if (viewController.errorMessage.value != null) {
               return Center(child: Text(viewController.errorMessage.value!));
             }
 
+            final message = viewController.snackMessage.value;
+            if (message != null) {
+              // Mostra o SnackBar
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor: viewController.errorMessage.value != null
+                        ? Theme.of(context).colorScheme.error
+                        : !AppTheme.currentMode(context)
+                            ? Theme.of(context).colorScheme.secondary
+                            : null,
+                  ),
+                );
+                viewController.snackMessage.value = null; // limpa
+              });
+            }
+
             return CurrencyCarousel(
-              currencies: viewController.currencies.value,
+              currencies: currencies,
               onFavoriteToggle: viewController.toggleFavorite,
               onCurrencyChanged: (currencyCode) {
                 viewController.loadQuotesForCurrency(currencyCode);
@@ -61,7 +82,9 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
               onUpdateCurrency: (updatedCurrency) async {
                 await viewController.updateCurrency(updatedCurrency);
               },
-              isExecuting: viewController.isExecuting,
+              addCurrencyCommand: viewController.addCurrencyCommand,
+              updateCurrencyCommand: viewController.updateCurrencyCommand,
+              // isExecuting: viewController.isExecuting,
             );
           },
         ),

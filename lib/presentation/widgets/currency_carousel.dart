@@ -1,5 +1,8 @@
 import 'package:carousel_slider/carousel_slider.dart' as slider;
+import 'package:currency_tracker/core/failures/failure.dart';
+import 'package:currency_tracker/core/patterns/command.dart';
 import 'package:currency_tracker/core/theme/app_theme.dart';
+import 'package:currency_tracker/core/typesdef/types_defs.dart';
 import 'package:currency_tracker/presentation/widgets/currency_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
@@ -11,20 +14,24 @@ class CurrencyCarousel extends StatefulWidget {
   final List<Currency> currencies;
   final Future<void> Function(String code)? onFavoriteToggle;
   final void Function(String currencyCode)? onCurrencyChanged;
-  final FlutterComputed<bool> isExecuting;
+  // final FlutterComputed<bool> isExecuting;
 
   // Callbacks para adicionar ou editar moeda
   final Future<void> Function(Currency newCurrency)? onAddCurrency;
-  final Future<void>Function(Currency updatedCurrency)? onUpdateCurrency;
+  final Future<void> Function(Currency updatedCurrency)? onUpdateCurrency;
+  final  Command<void, Failure> addCurrencyCommand;
+  final  Command<void, Failure> updateCurrencyCommand;
 
   const CurrencyCarousel({
     super.key,
     required this.currencies,
     this.onFavoriteToggle,
     this.onCurrencyChanged,
-    this.onAddCurrency,
+    required this.addCurrencyCommand,
+    required this.updateCurrencyCommand,
+     this.onAddCurrency,
     this.onUpdateCurrency,
-    required this.isExecuting,
+    // required this.isExecuting,
   });
 
   @override
@@ -49,8 +56,9 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
             CurrencySheet.show(
               context: context,
               currency: currency,
+              submitCommand: widget.updateCurrencyCommand,
               onSubmit: widget.onUpdateCurrency!,
-              isExecuting: widget.isExecuting,
+              // isExecuting: widget.isExecuting,
             );
           },
         ),
@@ -121,8 +129,9 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
       onTap: () {
         CurrencySheet.show(
           context: context,
+          submitCommand: widget.addCurrencyCommand,
           onSubmit: widget.onAddCurrency!,
-          isExecuting: widget.isExecuting,
+          // isExecuting: widget.isExecuting,
         );
       },
       child: Container(

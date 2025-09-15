@@ -19,6 +19,7 @@ class CurrencyListController {
   // final _currentCurrency = signal<Currency?>(null);
   final _quotes = signal<List<HistoricalQuote>>([]);
   final _errorMessage = signal<String?>(null);
+  final snackMessage = signal<String?>(null);
 
   // Getters para acessar signals (readonly)
   ReadonlySignal<bool> get isInitialized => _isInitialized.readonly();
@@ -30,6 +31,11 @@ class CurrencyListController {
   late final LoadCurrenciesCommand _loadCurrenciesCommand;
   late final AddCurrencyCommand _addCurrencyCommand;
   late final UpdateCurrencyCommand _updateCurrencyCommand;
+  
+  // Getters para comandos
+  AddCurrencyCommand get addCurrencyCommand => _addCurrencyCommand;
+  UpdateCurrencyCommand get updateCurrencyCommand => _updateCurrencyCommand;
+
   // atribututos de apoio
   Currency? _currentCurrency;
   int _lastAcessedIndex = -1;
@@ -89,8 +95,10 @@ class CurrencyListController {
           // _currencies.value = [..._currencies.value, _currentCurrency.value!];
           // _currentCurrency.value = null;
           _currentCurrency = null;
+          snackMessage.value = 'Moeda adicionada com sucesso!';
         },
         onFailure: (error) {
+          snackMessage.value = 'Erro ao adicionar moeda!';
           _setError(error.msg);
           // _currentCurrency.value = null;
           _currentCurrency = null;
@@ -112,11 +120,14 @@ class CurrencyListController {
           updatedList[_lastAcessedIndex] = _currentCurrency!;
           _currencies.value = updatedList;
           _lastAcessedIndex = -1;
+          snackMessage.value = 'Moeda atualizada com sucesso!';
+          // _currentCurrency.value = null;
           _currentCurrency = null;
         },
         onFailure: (error) {
           _setError(error.msg);
           // _currentCurrency.value = null;
+          snackMessage.value = 'Erro ao atualizar moeda!';
           _currentCurrency = null;
           _lastAcessedIndex = -1;
         },

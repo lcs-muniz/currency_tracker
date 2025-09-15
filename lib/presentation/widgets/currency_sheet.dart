@@ -1,3 +1,5 @@
+import 'package:currency_tracker/core/failures/failure.dart';
+import 'package:currency_tracker/core/patterns/command.dart';
 import 'package:currency_tracker/domain/entities/currency.dart';
 import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
@@ -5,20 +7,23 @@ import 'package:signals_flutter/signals_flutter.dart';
 class CurrencySheet extends StatefulWidget {
   final Currency? currency;
   final Future<void> Function(Currency) onSubmit;
-  final FlutterComputed<bool> isExecuting;
+  //final FlutterComputed<bool> isExecuting;
+  final Command<void, Failure> submitCommand;
 
   const CurrencySheet({
     super.key,
     this.currency,
+    required this.submitCommand,
     required this.onSubmit,
-    required this.isExecuting,
+    //required this.isExecuting,
   });
 
   static Future<void> show({
     required BuildContext context,
     Currency? currency,
+    required Command<void, Failure> submitCommand,
     required Future<void> Function(Currency) onSubmit,
-    required FlutterComputed<bool> isExecuting,
+    //required FlutterComputed<bool> isExecuting,
   }) async {
     return showModalBottomSheet(
       context: context,
@@ -26,8 +31,9 @@ class CurrencySheet extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => CurrencySheet(
         currency: currency,
+        submitCommand: submitCommand,
         onSubmit: onSubmit,
-        isExecuting: isExecuting,
+        //isExecuting: isExecuting,
       ),
     );
   }
@@ -70,10 +76,15 @@ class _CurrencySheetState extends State<CurrencySheet> {
         isFavorite: _isFavorite,
         latestQuote: double.tryParse(_quoteController.text) ?? 0.0,
       );
-      await widget.onSubmit(newCurrency); // aguarda a execução
 
-      Navigator.pop(context); // fecha o modal após o submit
-      return;
+      // await widget.onSubmitCommand.executeWith((currency: newCurrency));
+
+      widget.onSubmit(newCurrency).whenComplete(
+            () => Navigator.pop(context),
+          );
+
+      // Navigator.pop(context); // fecha o modal após o submit
+      // return;
     }
   }
 
@@ -81,6 +92,7 @@ class _CurrencySheetState extends State<CurrencySheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEdit = widget.currency != null;
+
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
@@ -118,6 +130,7 @@ class _CurrencySheetState extends State<CurrencySheet> {
               ],
             ),
           ),
+
           // Formulário
           Expanded(
             child: SingleChildScrollView(
@@ -178,12 +191,12 @@ class _CurrencySheetState extends State<CurrencySheet> {
                     ),
                     const SizedBox(height: 20),
                     Watch((context) {
-                      var isExecuting = widget.isExecuting.value;
-                      print(
-                          'isExecuting: $isExecuting horario ${DateTime.now()}');
+                      final isExecuting =
+                          widget.submitCommand.isExecuting.value;
                       return SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
+                          // onPressed: isExecuting ? null : _submit,
                           onPressed: isExecuting ? null : _submit,
                           child: isExecuting
                               ? const SizedBox(
