@@ -1,227 +1,90 @@
+import 'package:currency_tracker/domain/facades/i_currency_use_case_facade.dart';
+import 'package:currency_tracker/domain/entities/currency.dart';
 import 'package:currency_tracker/domain/entities/historical_quote.dart';
-import 'package:currency_tracker/presentation/commands/currency_commands.dart';
+import 'package:currency_tracker/presentation/viewmodels/currency_effect_commands.dart';
 import 'package:currency_tracker/test_utils/factories/historical_quote_factory.dart';
+import 'package:currency_tracker/presentation/commands/currency_commands.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
-import 'package:currency_tracker/domain/facades/i_currency_use_case_facade.dart';
-
-import '../../domain/entities/currency.dart';
+import 'currency_state.dart';
 
 class CurrencyListController {
-  // Dependências injetadas
-  late final ICurrencyUseCaseFacade _currencyFacade;
+  // --- Privado ---
+  final CurrencyState _state;
+  late final CurrencyEffectsCommands _effects;
 
-  // Signals de estado geral da ViewController
-  final _isInitialized = signal<bool>(false);
-
-  // Estados da Controller usando Signals
-  final _currencies = signal<List<Currency>>([]);
-  // final _currentCurrency = signal<Currency?>(null);
-  final _quotes = signal<List<HistoricalQuote>>([]);
-  final _errorMessage = signal<String?>(null);
-  final snackMessage = signal<String?>(null);
-
-  // Getters para acessar signals (readonly)
-  ReadonlySignal<bool> get isInitialized => _isInitialized.readonly();
-  ReadonlySignal<List<Currency>> get currencies => _currencies.readonly();
-  ReadonlySignal<List<HistoricalQuote>> get quotes => _quotes.readonly();
-  ReadonlySignal<String?> get errorMessage => _errorMessage.readonly();
-
-  // Comandos observáveis
-  late final LoadCurrenciesCommand _loadCurrenciesCommand;
-  late final AddCurrencyCommand _addCurrencyCommand;
-  late final UpdateCurrencyCommand _updateCurrencyCommand;
-  
-  // Getters para comandos
-  AddCurrencyCommand get addCurrencyCommand => _addCurrencyCommand;
-  UpdateCurrencyCommand get updateCurrencyCommand => _updateCurrencyCommand;
-
-  // atribututos de apoio
-  Currency? _currentCurrency;
-  int _lastAcessedIndex = -1;
-
-  late final isExecuting = computed(() =>
-      _loadCurrenciesCommand.isExecuting.value ||
-      _addCurrencyCommand.isExecuting.value ||
-      _updateCurrencyCommand.isExecuting.value);
-
-  CurrencyListController({
-    required ICurrencyUseCaseFacade currencyFacade,
-  }) : _currencyFacade = currencyFacade {
-    _initializeCommands();
+  CurrencyListController(ICurrencyUseCaseFacade facade)
+      : _state = CurrencyState() {
+    _effects = CurrencyEffectsCommands(
+      state: _state,
+      loadCmd: LoadCurrenciesCommand(facade),
+      addCmd: AddCurrencyCommand(facade),
+      updateCmd: UpdateCurrencyCommand(facade),
+    );
   }
 
-  // Inicializar comandos
-  void _initializeCommands() {
-    _loadCurrenciesCommand = LoadCurrenciesCommand(_currencyFacade);
-    _addCurrencyCommand = AddCurrencyCommand(_currencyFacade);
-    _updateCurrencyCommand = UpdateCurrencyCommand(_currencyFacade);
+  // --- Signals expostos ---
+  ReadonlySignal<bool> get isInitialized => _state.isInitialized.readonly();
+  ReadonlySignal<List<Currency>> get currencies => _state.currencies.readonly();
+  ReadonlySignal<List<HistoricalQuote>> get quotes => _state.quotes.readonly();
+  ReadonlySignal<String?> get errorMessage => _state.errorMessage.readonly();
+  ReadonlySignal<String?> get snackMessage => _state.snackMessage.readonly();
 
-    // _addCurrencyCommand = AddCurrencyCommand(_currencyFacade);
+  // --- Comandos expostos ---
+  AddCurrencyCommand get addCurrencyCommand => _effects.addCurrencyCommand;
+  UpdateCurrencyCommand get updateCurrencyCommand =>
+      _effects.updateCurrencyCommand;
+  LoadCurrenciesCommand get loadCurrenciesCommand =>
+      _effects.loadCurrenciesCommand;
 
-    // Observar o comando de carregar moedas
-    effect(() {
-      if (_loadCurrenciesCommand.isExecuting.value) return;
+  // --- Computed signals ---
+  Computed<bool> get isExecuting => computed(() =>
+      _effects.loadCmd.isExecuting.value ||
+      _effects.addCmd.isExecuting.value ||
+      _effects.updateCmd.isExecuting.value);
 
-      final result = _loadCurrenciesCommand.result.value;
-
-      if (result == null) return;
-
-      result.fold(
-        onSuccess: (currencies) {
-          _currencies.value = currencies;
-          _clearError();
-        },
-        onFailure: (error) {
-          _setError(error.msg);
-
-          if (_currencies.value.isEmpty) {
-            _currencies.value = [];
-          }
-        },
-      );
-    });
-
-    // observa efeito observa o comando de adicionar moeda
-    effect(() {
-      if (_addCurrencyCommand.isExecuting.value) return;
-      final result = _addCurrencyCommand.result.value;
-      if (result == null) return;
-
-      result.fold(
-        onSuccess: (_) {
-          _clearError();
-          _currencies.value = [..._currencies.value, _currentCurrency!];
-          // _currencies.value = [..._currencies.value, _currentCurrency.value!];
-          // _currentCurrency.value = null;
-          _currentCurrency = null;
-          snackMessage.value = 'Moeda adicionada com sucesso!';
-        },
-        onFailure: (error) {
-          snackMessage.value = 'Erro ao adicionar moeda!';
-          _setError(error.msg);
-          // _currentCurrency.value = null;
-          _currentCurrency = null;
-        },
-      );
-    });
-
-    // este efeito observa o comando de atualização de moeda
-    effect(() {
-      if (_updateCurrencyCommand.isExecuting.value) return;
-      final result = _updateCurrencyCommand.result.value;
-
-      if (result == null) return;
-
-      result.fold(
-        onSuccess: (_) {
-          _clearError();
-          final updatedList = List<Currency>.from(_currencies.value);
-          updatedList[_lastAcessedIndex] = _currentCurrency!;
-          _currencies.value = updatedList;
-          _lastAcessedIndex = -1;
-          snackMessage.value = 'Moeda atualizada com sucesso!';
-          // _currentCurrency.value = null;
-          _currentCurrency = null;
-        },
-        onFailure: (error) {
-          _setError(error.msg);
-          // _currentCurrency.value = null;
-          snackMessage.value = 'Erro ao atualizar moeda!';
-          _currentCurrency = null;
-          _lastAcessedIndex = -1;
-        },
-      );
-    });
-  }
-
-  Future<void> updateCurrency(Currency newCurrency) async {
-    _clearError();
-    _currentCurrency = newCurrency.copyWith();
-
-    _lastAcessedIndex =
-        _currencies.value.indexWhere((c) => c.code == newCurrency.code);
-
-    await _updateCurrencyCommand.executeWith((currency: newCurrency));
-  }
-
-  Future<void> addCurrency(Currency newCurrency) async {
-    _clearError();
-    // _currentCurrency.value = newCurrency.copyWith();
-    _currentCurrency = newCurrency.copyWith();
-    await _addCurrencyCommand.executeWith((currency: newCurrency));
-  }
-
-  Future<void> loadCurrencies() async {
-    _clearError();
-    await _loadCurrenciesCommand.executeWith(());
-  }
+  // --- Métodos públicos ---
+  Future<void> loadCurrencies() => _effects.loadCurrencies();
+  Future<void> addCurrency(Currency c) => _effects.addCurrency(c);
+  Future<void> updateCurrency(Currency c) => _effects.updateCurrency(c);
 
   Future<void> toggleFavorite(String code) async {
-    // Clona a lista atual
-    final updated = _currencies.value.map((currency) {
-      if (currency.code == code) {
-        // Cria uma nova instância com isFavorite invertido
-        return Currency(
-          name: currency.name,
-          code: currency.code,
-          isFavorite: !currency.isFavorite,
-          latestQuote: currency.latestQuote,
-        );
-      }
-      return currency;
+    final updated = _state.currencies.value.map((c) {
+      return c.code == code ? c.copyWith(isFavorite: !c.isFavorite) : c;
     }).toList();
-
-    // Atualiza o signal
-    _currencies.value = updated;
+    _state.currencies.value = updated;
   }
 
-  void loadQuotesForCurrency(String Code) {
-    // Aqui você depois vai buscar no SQLite
+  void loadQuotesForCurrency(String code) {
     final fakeQuotes =
-        HistoricalQuoteFactory.list(currencyCode: Code, count: 10);
-
-    _quotes.value = fakeQuotes; // atualiza o signal
-  }
-
-  void _clearError() {
-    _errorMessage.value = null;
-  }
-
-  // Métodos privados para gerenciar erro
-  void _setError(String message) {
-    _errorMessage.value = message;
-  }
-
-  // Limpar busca
-  void clearSearch() {
-    _clearError();
-    _initializeData();
-
-    // Limpar comandos
-    _loadCurrenciesCommand.clear();
-    _addCurrencyCommand.clear();
-    _updateCurrencyCommand.clear();
-  }
-
-  // Dispose resources
-  void dispose() {
-    _loadCurrenciesCommand.reset();
-    _addCurrencyCommand.reset();
-    _updateCurrencyCommand.reset();
-  }
-
-  // Inicializar com dados mock
-  void _initializeData() {
-    //searchLoadCurrencies();
-    _isInitialized.value = true;
+        HistoricalQuoteFactory.list(currencyCode: code, count: 10);
+    _state.quotes.value = fakeQuotes;
   }
 
   Currency? getCurrencyByCode(String code) {
     try {
-      return _currencies.value.firstWhere((currency) => currency.code == code);
-    } catch (e) {
+      return _state.currencies.value.firstWhere((c) => c.code == code);
+    } catch (_) {
       return null;
     }
+  }
+
+  String? consumeSnackMessage() {
+    final msg = _state.snackMessage.value;
+    _state.snackMessage.value = null;
+    return msg;
+  }
+
+  void clearSearch() {
+    _state.clearError();
+    _effects.loadCmd.clear();
+    _effects.addCmd.clear();
+    _effects.updateCmd.clear();
+  }
+
+  void dispose() {
+    _effects.loadCmd.reset();
+    _effects.addCmd.reset();
+    _effects.updateCmd.reset();
   }
 }

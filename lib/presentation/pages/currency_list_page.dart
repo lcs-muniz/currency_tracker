@@ -51,8 +51,10 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
             if (viewController.errorMessage.value != null) {
               return Center(child: Text(viewController.errorMessage.value!));
             }
+            print('currencies: $currencies horario ${DateTime.now()}');
 
-            final message = viewController.snackMessage.value;
+            //final message = viewController.snackMessage.value;
+            final message = viewController.consumeSnackMessage();
             if (message != null) {
               // Mostra o SnackBar
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -66,7 +68,7 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
                             : null,
                   ),
                 );
-                viewController.snackMessage.value = null; // limpa
+                //viewController.snackMessage.value = null; // limpa
               });
             }
 

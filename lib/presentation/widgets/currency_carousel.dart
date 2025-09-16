@@ -2,10 +2,8 @@ import 'package:carousel_slider/carousel_slider.dart' as slider;
 import 'package:currency_tracker/core/failures/failure.dart';
 import 'package:currency_tracker/core/patterns/command.dart';
 import 'package:currency_tracker/core/theme/app_theme.dart';
-import 'package:currency_tracker/core/typesdef/types_defs.dart';
 import 'package:currency_tracker/presentation/widgets/currency_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../domain/entities/currency.dart';
 import 'currency_carousel_item.dart';

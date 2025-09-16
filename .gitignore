@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# arquivos que serão removidos no futuro
+lib/presentation/viewmodels/currency_list_viewmodel_bkp.dart
