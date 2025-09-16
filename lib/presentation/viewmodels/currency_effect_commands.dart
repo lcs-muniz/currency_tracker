@@ -1,3 +1,5 @@
+import 'package:currency_tracker/core/failures/failure.dart';
+import 'package:currency_tracker/core/patterns/command.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 import 'package:currency_tracker/domain/entities/currency.dart';
 import 'package:currency_tracker/presentation/commands/currency_commands.dart';
@@ -18,94 +20,109 @@ class CurrencyEffectsCommands {
     required this.addCmd,
     required this.updateCmd,
   }) {
+    // Observadores que reagem automaticamente ao término dos comandos
     _observeLoad();
     _observeAdd();
     _observeUpdate();
   }
 
-  // --- Observers ---
+  // ========================================================
+  //   MÉTODO GENÉRICO DE OBSERVAÇÃO DE COMANDOS
+  // ========================================================
+  void _observeCommand<T>(
+    Command<T, Failure> command, {
+    required void Function(T data) onSuccess,
+    void Function(Failure err)? onFailure,
+  }) {
+    effect(() {
+      // 1) Ignora enquanto está executando
+      if (command.isExecuting.value) return;
+
+      // 2) Ignora até existir um resultado
+      final result = command.result.value;
+      if (result == null) return;
+
+      // 3) Sucesso ou falha
+      result.fold(
+        onSuccess: (data) {
+          state.clearError(); // sempre limpa erros em sucesso
+          onSuccess(data); // ação específica para esse comando
+        },
+        onFailure: (err) {
+          state.setError(err.msg); // registra o erro no estado
+          if (onFailure != null) onFailure(err);
+        },
+      );
+    });
+  }
+
+  // ========================================================
+  //   OBSERVERS ESPECÍFICOS
+  // ========================================================
+
+  // Carregar moedas
   void _observeLoad() {
-    effect(() {
-      if (loadCmd.isExecuting.value) return;
-      final result = loadCmd.result.value;
-      if (result == null) return;
-
-      result.fold(
-        onSuccess: (currencies) {
-          state.currencies.value = currencies;
-          state.clearError();
-        },
-        onFailure: (err) {
-          state.setError(err.msg);
-          if (state.currencies.value.isEmpty) {
-            state.currencies.value = [];
-          }
-        },
-      );
-    });
+    _observeCommand<List<Currency>>(
+      loadCmd,
+      onSuccess: (currencies) {
+        state.currencies.value = currencies;
+      },
+      onFailure: (err) {
+        if (state.currencies.value.isEmpty) {
+          state.currencies.value = [];
+        }
+      },
+    );
   }
 
+  // Adicionar moeda
   void _observeAdd() {
-    effect(() {
-      if (addCmd.isExecuting.value) return;
-      final result = addCmd.result.value;
-      if (result == null) return;
-
-      result.fold(
-        onSuccess: (_) {
-          state.clearError();
-          state.currencies.value = [
-            ...state.currencies.value,
-            _currentCurrency!
-          ];
-          _currentCurrency = null;
-          state.snackMessage.value = 'Moeda adicionada com sucesso!';
-        },
-        onFailure: (err) {
-          state.snackMessage.value = 'Erro ao adicionar moeda!';
-          state.setError(err.msg);
-          _currentCurrency = null;
-        },
-      );
-    });
+    _observeCommand<void>(
+      addCmd,
+      onSuccess: (_) {
+        state.currencies.value = [...state.currencies.value, _currentCurrency!];
+        _currentCurrency = null;
+        state.snackMessage.value = 'Moeda adicionada com sucesso!';
+      },
+      onFailure: (_) {
+        state.snackMessage.value = 'Erro ao adicionar moeda!';
+        _currentCurrency = null;
+      },
+    );
   }
 
+  // Atualizar moeda
   void _observeUpdate() {
-    effect(() {
-      if (updateCmd.isExecuting.value) return;
-      final result = updateCmd.result.value;
-      if (result == null) return;
-
-      result.fold(
-        onSuccess: (_) {
-          state.clearError();
-          final updated = List<Currency>.from(state.currencies.value);
-          updated[_lastAccessedIndex] = _currentCurrency!;
-          state.currencies.value = updated;
-          _lastAccessedIndex = -1;
-          state.snackMessage.value = 'Moeda atualizada com sucesso!';
-          _currentCurrency = null;
-        },
-        onFailure: (err) {
-          state.setError(err.msg);
-          state.snackMessage.value = 'Erro ao atualizar moeda!';
-          _currentCurrency = null;
-          _lastAccessedIndex = -1;
-        },
-      );
-    });
+    _observeCommand<void>(
+      updateCmd,
+      onSuccess: (_) {
+        final updated = List<Currency>.from(state.currencies.value);
+        updated[_lastAccessedIndex] = _currentCurrency!;
+        state.currencies.value = updated;
+        _lastAccessedIndex = -1;
+        state.snackMessage.value = 'Moeda atualizada com sucesso!';
+        _currentCurrency = null;
+      },
+      onFailure: (_) {
+        state.snackMessage.value = 'Erro ao atualizar moeda!';
+        _currentCurrency = null;
+        _lastAccessedIndex = -1;
+      },
+    );
   }
 
-  // --- Métodos públicos ---
+  // ========================================================
+  //   MÉTODOS PÚBLICOS (CHAMADOS PELOS WIDGETS)
+  // ========================================================
+
   Future<void> loadCurrencies() async {
-    print('entrou em loadCurrencies efect');
     state.clearError();
-    await loadCmd.executeWith(());
+    await loadCmd.executeWith(()); // dispara o comando
   }
 
   Future<void> addCurrency(Currency currency) async {
     state.clearError();
-    _currentCurrency = currency.copyWith();
+    _currentCurrency = currency.copyWith(); // guarda temporário
     await addCmd.executeWith((currency: currency));
   }
 
@@ -117,7 +134,10 @@ class CurrencyEffectsCommands {
     await updateCmd.executeWith((currency: currency));
   }
 
-  // --- Getters para widgets ---
+  // ========================================================
+  //   GETTERS PARA WIDGETS USAREM DIRETAMENTE OS COMANDOS
+  // ========================================================
+
   AddCurrencyCommand get addCurrencyCommand => addCmd;
   UpdateCurrencyCommand get updateCurrencyCommand => updateCmd;
   LoadCurrenciesCommand get loadCurrenciesCommand => loadCmd;
