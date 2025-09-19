@@ -53,6 +53,9 @@ class CurrencyListController {
       return c.code == code ? c.copyWith(isFavorite: !c.isFavorite) : c;
     }).toList();
     _state.currencies.value = updated;
+
+    final currencyToUpdate = updated.firstWhere((c) => c.code == code);
+    await updateCurrency(currencyToUpdate);
   }
 
   void loadQuotesForCurrency(String code) {
