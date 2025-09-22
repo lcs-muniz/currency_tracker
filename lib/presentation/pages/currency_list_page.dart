@@ -53,14 +53,25 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
             }
             print('currencies: $currencies horario ${DateTime.now()}');
 
-            //final message = viewController.snackMessage.value;
             final message = viewController.consumeSnackMessage();
             if (message != null) {
-              // Mostra o SnackBar
               WidgetsBinding.instance.addPostFrameCallback((_) {
+                ScaffoldMessenger.of(context).removeCurrentSnackBar();
+
+                final isRemoveMessage = message.contains('removida.');
+
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(message),
+                    duration: const Duration(seconds: 3),
+                    action: isRemoveMessage
+                        ? SnackBarAction(
+                            label: 'DESFAZER',
+                            onPressed: () {
+                              viewController.undoRemove();
+                            },
+                          )
+                        : null,
                     backgroundColor: viewController.errorMessage.value != null
                         ? Theme.of(context).colorScheme.error
                         : !AppTheme.currentMode(context)
@@ -68,7 +79,6 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
                             : null,
                   ),
                 );
-                //viewController.snackMessage.value = null; // limpa
               });
             }
 
@@ -86,6 +96,7 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
               },
               addCurrencyCommand: viewController.addCurrencyCommand,
               updateCurrencyCommand: viewController.updateCurrencyCommand,
+              onRemoveCurrency: viewController.removeCurrency,
               // isExecuting: viewController.isExecuting,
             );
           },

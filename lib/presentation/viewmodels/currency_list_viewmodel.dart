@@ -9,7 +9,6 @@ import 'package:signals_flutter/signals_flutter.dart';
 import 'currency_state.dart';
 
 class CurrencyListController {
-  // --- Privado ---
   final CurrencyState _state;
   late final CurrencyEffectsCommands _effects;
 
@@ -20,33 +19,39 @@ class CurrencyListController {
       loadCmd: LoadCurrenciesCommand(facade),
       addCmd: AddCurrencyCommand(facade),
       updateCmd: UpdateCurrencyCommand(facade),
+      removeCmd: RemoveCurrencyCommand(facade),
     );
   }
 
-  // --- Signals expostos ---
-  ReadonlySignal<bool> get isInitialized => _state.isInitialized.readonly();
   ReadonlySignal<List<Currency>> get currencies => _state.currencies.readonly();
   ReadonlySignal<List<HistoricalQuote>> get quotes => _state.quotes.readonly();
   ReadonlySignal<String?> get errorMessage => _state.errorMessage.readonly();
   ReadonlySignal<String?> get snackMessage => _state.snackMessage.readonly();
 
-  // --- Comandos expostos ---
   AddCurrencyCommand get addCurrencyCommand => _effects.addCurrencyCommand;
   UpdateCurrencyCommand get updateCurrencyCommand =>
       _effects.updateCurrencyCommand;
   LoadCurrenciesCommand get loadCurrenciesCommand =>
       _effects.loadCurrenciesCommand;
+  RemoveCurrencyCommand get removeCurrencyCommand =>
+      _effects.removeCurrencyCommand;
 
-  // --- Computed signals ---
   Computed<bool> get isExecuting => computed(() =>
       _effects.loadCmd.isExecuting.value ||
       _effects.addCmd.isExecuting.value ||
-      _effects.updateCmd.isExecuting.value);
+      _effects.updateCmd.isExecuting.value ||
+      _effects.removeCmd.isExecuting.value);
 
-  // --- Métodos públicos ---
   Future<void> loadCurrencies() => _effects.loadCurrencies();
   Future<void> addCurrency(Currency c) => _effects.addCurrency(c);
   Future<void> updateCurrency(Currency c) => _effects.updateCurrency(c);
+
+  Future<void> removeCurrency(Currency c) async =>
+      _effects.removeCurrencyOptimistic(c);
+
+  Future<void> undoRemove() async {
+    _effects.undoRemove();
+  }
 
   Future<void> toggleFavorite(String code) async {
     final updated = _state.currencies.value.map((c) {
@@ -86,8 +91,6 @@ class CurrencyListController {
   }
 
   void dispose() {
-    _effects.loadCmd.reset();
-    _effects.addCmd.reset();
-    _effects.updateCmd.reset();
+    _effects.dispose();
   }
 }

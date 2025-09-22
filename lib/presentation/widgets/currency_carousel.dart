@@ -12,13 +12,13 @@ class CurrencyCarousel extends StatefulWidget {
   final List<Currency> currencies;
   final Future<void> Function(String code)? onFavoriteToggle;
   final void Function(String currencyCode)? onCurrencyChanged;
-  // final FlutterComputed<bool> isExecuting;
 
-  // Callbacks para adicionar ou editar moeda
   final Future<void> Function(Currency newCurrency)? onAddCurrency;
   final Future<void> Function(Currency updatedCurrency)? onUpdateCurrency;
-  final  Command<void, Failure> addCurrencyCommand;
-  final  Command<void, Failure> updateCurrencyCommand;
+  final Command<void, Failure> addCurrencyCommand;
+  final Command<void, Failure> updateCurrencyCommand;
+
+  final Future<void> Function(Currency currency) onRemoveCurrency;
 
   const CurrencyCarousel({
     super.key,
@@ -27,9 +27,9 @@ class CurrencyCarousel extends StatefulWidget {
     this.onCurrencyChanged,
     required this.addCurrencyCommand,
     required this.updateCurrencyCommand,
-     this.onAddCurrency,
+    this.onAddCurrency,
     this.onUpdateCurrency,
-    // required this.isExecuting,
+    required this.onRemoveCurrency,
   });
 
   @override
@@ -44,10 +44,10 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Lista com moedas + um card extra para "Adicionar"
     final allItems = [
       ...widget.currencies.map(
         (currency) => CurrencyCarouselItem(
+          key: Key(currency.code),
           currency: currency,
           onFavoriteToggle: widget.onFavoriteToggle,
           onTap: () {
@@ -56,9 +56,9 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
               currency: currency,
               submitCommand: widget.updateCurrencyCommand,
               onSubmit: widget.onUpdateCurrency!,
-              // isExecuting: widget.isExecuting,
             );
           },
+          onRemove: () => widget.onRemoveCurrency(currency),
         ),
       ),
       _buildAddCurrencyCard(theme),
@@ -67,7 +67,6 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Carrossel
         slider.CarouselSlider(
           carouselController: _carouselController,
           options: slider.CarouselOptions(
@@ -79,7 +78,6 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
                 _currentIndex = index;
               });
 
-              // Notifica mudança de moeda apenas se não for o card de adicionar
               if (widget.onCurrencyChanged != null &&
                   index < widget.currencies.length) {
                 final selectedCurrency = widget.currencies[index].code;
@@ -89,10 +87,7 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
           ),
           items: allItems,
         ),
-
         const SizedBox(height: 12),
-
-        // Indicadores (dots)
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(allItems.length, (index) {
@@ -117,7 +112,6 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
     );
   }
 
-  /// Card para adicionar nova moeda
   Widget _buildAddCurrencyCard(ThemeData theme) {
     var color = AppTheme.currentMode(context)
         ? theme.colorScheme.onPrimary
@@ -129,7 +123,6 @@ class _CurrencyCarouselState extends State<CurrencyCarousel> {
           context: context,
           submitCommand: widget.addCurrencyCommand,
           onSubmit: widget.onAddCurrency!,
-          // isExecuting: widget.isExecuting,
         );
       },
       child: Container(

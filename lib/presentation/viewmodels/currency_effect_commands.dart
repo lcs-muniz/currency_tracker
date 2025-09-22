@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:currency_tracker/core/failures/failure.dart';
 import 'package:currency_tracker/core/patterns/command.dart';
 import 'package:signals_flutter/signals_flutter.dart';
@@ -10,57 +11,50 @@ class CurrencyEffectsCommands {
   final LoadCurrenciesCommand loadCmd;
   final AddCurrencyCommand addCmd;
   final UpdateCurrencyCommand updateCmd;
+  final RemoveCurrencyCommand removeCmd;
 
   Currency? _currentCurrency;
   int _lastAccessedIndex = -1;
+
+  Currency? _deletedCurrency;
+  Timer? _deleteTimer;
 
   CurrencyEffectsCommands({
     required this.state,
     required this.loadCmd,
     required this.addCmd,
     required this.updateCmd,
+    required this.removeCmd,
   }) {
-    // Observadores que reagem automaticamente ao término dos comandos
     _observeLoad();
     _observeAdd();
     _observeUpdate();
+    _observeRemove();
   }
 
-  // ========================================================
-  //   MÉTODO GENÉRICO DE OBSERVAÇÃO DE COMANDOS
-  // ========================================================
   void _observeCommand<T>(
     Command<T, Failure> command, {
     required void Function(T data) onSuccess,
     void Function(Failure err)? onFailure,
   }) {
     effect(() {
-      // 1) Ignora enquanto está executando
       if (command.isExecuting.value) return;
-
-      // 2) Ignora até existir um resultado
       final result = command.result.value;
       if (result == null) return;
 
-      // 3) Sucesso ou falha
       result.fold(
         onSuccess: (data) {
-          state.clearError(); // sempre limpa erros em sucesso
-          onSuccess(data); // ação específica para esse comando
+          state.clearError();
+          onSuccess(data);
         },
         onFailure: (err) {
-          state.setError(err.msg); // registra o erro no estado
+          state.setError(err.msg);
           if (onFailure != null) onFailure(err);
         },
       );
     });
   }
 
-  // ========================================================
-  //   OBSERVERS ESPECÍFICOS
-  // ========================================================
-
-  // Carregar moedas
   void _observeLoad() {
     _observeCommand<List<Currency>>(
       loadCmd,
@@ -75,12 +69,17 @@ class CurrencyEffectsCommands {
     );
   }
 
-  // Adicionar moeda
   void _observeAdd() {
     _observeCommand<void>(
       addCmd,
       onSuccess: (_) {
-        state.currencies.value = [...state.currencies.value, _currentCurrency!];
+        if (!state.currencies.value
+            .any((c) => c.code == _currentCurrency!.code)) {
+          state.currencies.value = [
+            ...state.currencies.value,
+            _currentCurrency!
+          ];
+        }
         _currentCurrency = null;
         state.snackMessage.value = 'Moeda adicionada com sucesso!';
       },
@@ -91,7 +90,6 @@ class CurrencyEffectsCommands {
     );
   }
 
-  // Atualizar moeda
   void _observeUpdate() {
     _observeCommand<void>(
       updateCmd,
@@ -111,18 +109,59 @@ class CurrencyEffectsCommands {
     );
   }
 
-  // ========================================================
-  //   MÉTODOS PÚBLICOS (CHAMADOS PELOS WIDGETS)
-  // ========================================================
+  void _observeRemove() {
+    _observeCommand<void>(
+      removeCmd,
+      onSuccess: (_) {
+        _deletedCurrency = null;
+      },
+      onFailure: (_) {
+        if (_deletedCurrency != null) {
+          state.currencies.value = [
+            ...state.currencies.value,
+            _deletedCurrency!
+          ];
+        }
+        state.snackMessage.value = 'Erro ao remover moeda!';
+      },
+    );
+  }
+
+  Future<void> _confirmRemove() async {
+    if (_deletedCurrency != null) {
+      await removeCmd.executeWith((code: _deletedCurrency!.code));
+    }
+  }
+
+  void removeCurrencyOptimistic(Currency currency) {
+    _deleteTimer?.cancel();
+    _deletedCurrency = currency;
+
+    state.currencies.value =
+        state.currencies.value.where((c) => c.code != currency.code).toList();
+
+    state.snackMessage.value = '${currency.name} removida.';
+
+    _deleteTimer = Timer(const Duration(seconds: 3), _confirmRemove);
+  }
+
+  void undoRemove() {
+    _deleteTimer?.cancel();
+
+    if (_deletedCurrency != null) {
+      state.currencies.value = [...state.currencies.value, _deletedCurrency!];
+      _deletedCurrency = null;
+    }
+  }
 
   Future<void> loadCurrencies() async {
     state.clearError();
-    await loadCmd.executeWith(()); // dispara o comando
+    await loadCmd.executeWith(());
   }
 
   Future<void> addCurrency(Currency currency) async {
     state.clearError();
-    _currentCurrency = currency.copyWith(); // guarda temporário
+    _currentCurrency = currency.copyWith();
     await addCmd.executeWith((currency: currency));
   }
 
@@ -134,11 +173,16 @@ class CurrencyEffectsCommands {
     await updateCmd.executeWith((currency: currency));
   }
 
-  // ========================================================
-  //   GETTERS PARA WIDGETS USAREM DIRETAMENTE OS COMANDOS
-  // ========================================================
+  void dispose() {
+    _deleteTimer?.cancel();
+    loadCmd.reset();
+    addCmd.reset();
+    updateCmd.reset();
+    removeCmd.reset();
+  }
 
   AddCurrencyCommand get addCurrencyCommand => addCmd;
   UpdateCurrencyCommand get updateCurrencyCommand => updateCmd;
   LoadCurrenciesCommand get loadCurrenciesCommand => loadCmd;
+  RemoveCurrencyCommand get removeCurrencyCommand => removeCmd;
 }

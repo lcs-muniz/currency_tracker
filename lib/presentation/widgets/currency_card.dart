@@ -119,7 +119,7 @@ class CurrencyCard extends StatelessWidget {
               ),
               // Mensagem de toque duplo
               Text(
-                'Toque duplo para editar',
+                'Toque duplo para editar, segure para excluir',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.6),
                   fontStyle: FontStyle.italic,
