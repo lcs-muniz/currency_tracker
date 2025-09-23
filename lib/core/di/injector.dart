@@ -16,7 +16,6 @@ import 'package:currency_tracker/domain/usecases/get_all_currencies_usecase_impl
 import 'package:currency_tracker/domain/usecases/get_currency_usecase_impl.dart';
 import 'package:currency_tracker/domain/usecases/get_favorities_usecase_impl.dart';
 import 'package:currency_tracker/domain/usecases/get_historical_quotes_usecase_impl.dart';
-import 'package:currency_tracker/domain/usecases/get_latest_quote_usecase_impl.dart';
 import 'package:currency_tracker/domain/usecases/i_usecases.dart';
 import 'package:currency_tracker/domain/usecases/remove_currency_usecase_impl.dart';
 import 'package:currency_tracker/domain/usecases/update_currency_usecase_impl.dart';
@@ -30,7 +29,6 @@ void setupDependencyInjection() {
       .addSingleton<ICurrencyRemoteService>(CurrencyRemoteDataSourceImpl.new);
   injector.addSingleton<ICurrencyRepository>(CurrencyRepositoryImpl.new);
 
-  injector.addSingleton<IGetLatestQuoteUseCase>(GetLatestQuoteUsecase.new);
   injector.addSingleton<IAddCurrencyUseCase>(AddCurrencyUsecase.new);
   injector.addSingleton<IGetAllCurrenciesUseCase>(GetAllCurrenciesUsecase.new);
   injector.addSingleton<IUpdateCurrencyUseCase>(UpdateCurrencyUsecase.new);

@@ -6,18 +6,6 @@ import 'package:currency_tracker/domain/entities/historical_quote.dart';
 import 'package:currency_tracker/domain/facades/i_currency_use_case_facade.dart';
 import 'package:currency_tracker/core/patterns/result.dart';
 
-final class GetLatestQuoteCommand
-    extends ParameterizedCommand<Currency, Failure, NoParams> {
-  final ICurrencyUseCaseFacade _currencyUseCaseFacade;
-
-  GetLatestQuoteCommand(this._currencyUseCaseFacade);
-
-  @override
-  Future<CurrencyResult> execute() async {
-    return await _currencyUseCaseFacade.getLatestQuote();
-  }
-}
-
 final class AddCurrencyCommand
     extends ParameterizedCommand<void, Failure, CurrencyParams> {
   final ICurrencyUseCaseFacade _currencyUseCaseFacade;
@@ -129,8 +117,22 @@ final class LoadCurrenciesCommand
 
   @override
   Future<CurrencyListResult> execute() async {
-    //return _currencyUseCaseFacade.getMockCurrencies();
-    // TODO: MODIFICAR AQUI DEPOIS
-    return await _currencyUseCaseFacade.getAllCurrencies();
+    final result = await _currencyUseCaseFacade.getAllCurrencies();
+
+    return result.fold(
+      onSuccess: (currencies) {
+        if (currencies.isEmpty) {
+          print(
+              'INFO: API e cache local falharam ou estão vazios. Usando dados mock de fallback.');
+          return _currencyUseCaseFacade.getMockCurrencies();
+        }
+        return Success(currencies);
+      },
+      onFailure: (error) {
+        print(
+            'ERRO: Falha geral ao carregar moedas. Usando dados mock de fallback. Erro: $error');
+        return _currencyUseCaseFacade.getMockCurrencies();
+      },
+    );
   }
 }

@@ -4,7 +4,7 @@ import 'package:currency_tracker/domain/entities/currency.dart';
 
 abstract interface class ICurrencyRepository {
   // ultima cotaçao (dados remotos)
-  Future<CurrencyResult> getLatestQuote();
+   Future<CurrencyListResult> getLatestQuotes(String baseCurrency);
   // adicionar moeda
   Future<VoidResult> addCurrency(Currency currency);
   // remover moeda

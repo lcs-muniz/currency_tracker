@@ -4,8 +4,6 @@ import 'package:currency_tracker/core/typesdef/types_defs.dart';
 abstract interface class IUseCase<T, Params extends Object?> {
   Future<T> call(Params params);
 }
-abstract interface class IGetLatestQuoteUseCase
-    implements IUseCase<CurrencyResult,NoParams> {}
 abstract interface class IAddCurrencyUseCase
     implements IUseCase<VoidResult,CurrencyParams> {}
 abstract interface class IRemoveCurrencyUseCase

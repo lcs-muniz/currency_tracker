@@ -12,15 +12,12 @@ class ApiHttpClientService {
     Map<String, String>? headers,
   }) async {
     try {
-      
-      
+      print("📡 Fazendo requisição GET para a URL: $url");
 
-      final response = await http
-          .get(
-            Uri.parse(url),
-            headers: {'Content-Type': 'application/json', ...?headers},
-          )
-          .timeout(_timeout);
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json', ...?headers},
+      ).timeout(_timeout);
 
       return _handleResponse(response);
     } on SocketException {
@@ -60,8 +57,11 @@ class ApiHttpClientService {
   static Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return {};
+      print("✅ RESPOSTA DA API RECEBIDA COM SUCESSO!");
       return json.decode(response.body);
     } else {
+      print("❌ ERRO DA API: Status Code: ${response.statusCode}");
+      print("❌ CORPO DA RESPOSTA: ${response.body}");
       switch (response.statusCode) {
         case 400:
           throw ApiException('Requisição inválida');

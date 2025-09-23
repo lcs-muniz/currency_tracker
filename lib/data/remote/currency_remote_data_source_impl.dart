@@ -8,16 +8,27 @@ import 'i_currency_remote_service.dart';
 import 'api_http_client_service.dart';
 
 class CurrencyRemoteDataSourceImpl implements ICurrencyRemoteService {
-  CurrencyRemoteDataSourceImpl();
+  @override
+  Future<CurrencyListResult> getRatesFor(String baseCurrency) async {
+    try {
+      final url = ApiConfig.getBaseUrl(baseCurrency); // URL dinâmica
+      final response = await ApiHttpClientService.get(url);
+      final currencies = CurrencyMapper.fromApiMap(response);
+      return Success(currencies);
+    } on ApiException catch (e) {
+      return Error(ApiException(e.msg));
+    } catch (e) {
+      return Error(DefaultFailure(AppMessages.error.defaultError));
+    }
+  }
 
   @override
-  Future<CurrencyResult> getLatestQuote() async {
+  Future<CurrencyListResult> getInitialRates() async {
     try {
-      const url = ApiConfig.baseUrl;
+      final url = ApiConfig.getBaseUrl('USD');
       final response = await ApiHttpClientService.get(url);
-
-      final currency = CurrencyMapper.fromMap(response);
-      return Success(currency);
+      final currencies = CurrencyMapper.fromApiMap(response);
+      return Success(currencies);
     } on ApiException catch (e) {
       return Error(ApiException(e.msg));
     } catch (e) {
