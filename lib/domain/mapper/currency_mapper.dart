@@ -17,7 +17,7 @@ class CurrencyMapper {
       throw ApiException('A API retornou um erro: $errorType');
     }
 
-    final rates = apiMap['rates'] as Map<String, dynamic>;
+    final rates = apiMap['conversion_rates'] as Map<String, dynamic>;
     final List<Currency> currencies = [];
 
     rates.forEach((code, quote) {
