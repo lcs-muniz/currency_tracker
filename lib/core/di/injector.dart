@@ -2,7 +2,6 @@ import 'package:auto_injector/auto_injector.dart';
 import 'package:currency_tracker/core/theme/theme_controller.dart';
 import 'package:currency_tracker/presentation/viewmodels/currency_list_viewmodel.dart';
 import 'package:currency_tracker/presentation/viewmodels/currency_converter_viewmodel.dart';
-import 'package:currency_tracker/presentation/commands/currency_commands.dart';
 import 'package:currency_tracker/data/database/i_database_service.dart';
 import 'package:currency_tracker/data/database/sql_database_service_impl.dart';
 import 'package:currency_tracker/data/remote/currency_remote_data_source_impl.dart';
@@ -45,7 +44,6 @@ void setupDependencyInjection() {
   injector.addSingleton<HomeViewController>(HomeViewController.new);
   injector.addSingleton<CurrencyListController>(CurrencyListController.new);
   injector.addSingleton<CurrencyConverterController>(CurrencyConverterController.new);
-
 
   // Commands
   //injector.add(GetHistoricalQuotesCommand.new);

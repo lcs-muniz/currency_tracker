@@ -1,4 +1,5 @@
 import 'package:currency_tracker/core/theme/app_theme.dart';
+import 'package:currency_tracker/core/utils/currency_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
@@ -15,73 +16,63 @@ class CurrencyListPage extends StatefulWidget {
 
 class _CurrencyListPageState extends State<CurrencyListPage> {
   late final CurrencyListController viewController;
+  late final void Function() _disposeSnackEffect;
 
   @override
   void initState() {
     super.initState();
     viewController = injector.get<CurrencyListController>();
     viewController.loadCurrencies();
+
+    _disposeSnackEffect = effect(() {
+      final message = viewController.snackMessage.value;
+      if (message != null && context.mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          final isRemoveMessage = message.contains('removida.');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: const Duration(seconds: 3),
+              action: isRemoveMessage
+                  ? SnackBarAction(
+                      label: 'DESFAZER',
+                      onPressed: () {
+                        viewController.undoRemove();
+                      },
+                    )
+                  : null,
+              backgroundColor: viewController.errorMessage.value != null
+                  ? Theme.of(context).colorScheme.error
+                  : !AppTheme.currentMode(context)
+                      ? Theme.of(context).colorScheme.secondary
+                      : null,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+            ),
+          );
+          viewController.clearSnackMessage();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _disposeSnackEffect();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Watch((context) {
-        //   var isExecuting = viewController.isExecuting.value;
-        //   print(' isExecuting: $isExecuting horario ${DateTime.now()}');
-        //   return ElevatedButton(
-        //       onPressed: () async {
-        //         await viewController.loadCurrencies();
-        //         // ou: await viewController.addCurrency(Currency(...));
-        //       },
-        //       child: isExecuting
-        //           ? const CircularProgressIndicator()
-        //           : const Text('Test'));
-        // }),
-        // Carrossel fixo no topo
         Watch(
           (context) {
             var currencies = viewController.currencies.value;
-
-            // if (viewController.isExecuting.value) {
-            //   return const Center(child: CircularProgressIndicator());
-            // }
-
-            if (viewController.errorMessage.value != null) {
-              return Center(child: Text(viewController.errorMessage.value!));
-            }
-            print('currencies: $currencies horario ${DateTime.now()}');
-
-            final message = viewController.consumeSnackMessage();
-            if (message != null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                ScaffoldMessenger.of(context).removeCurrentSnackBar();
-
-                final isRemoveMessage = message.contains('removida.');
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    duration: const Duration(seconds: 3),
-                    action: isRemoveMessage
-                        ? SnackBarAction(
-                            label: 'DESFAZER',
-                            onPressed: () {
-                              viewController.undoRemove();
-                            },
-                          )
-                        : null,
-                    backgroundColor: viewController.errorMessage.value != null
-                        ? Theme.of(context).colorScheme.error
-                        : !AppTheme.currentMode(context)
-                            ? Theme.of(context).colorScheme.secondary
-                            : null,
-                  ),
-                );
-              });
-            }
-
             return CurrencyCarousel(
               currencies: currencies,
               onFavoriteToggle: viewController.toggleFavorite,
@@ -97,13 +88,10 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
               addCurrencyCommand: viewController.addCurrencyCommand,
               updateCurrencyCommand: viewController.updateCurrencyCommand,
               onRemoveCurrency: viewController.removeCurrency,
-              // isExecuting: viewController.isExecuting,
             );
           },
         ),
         const SizedBox(height: 20),
-
-        // Lista rolável com Scrollbar
         Expanded(
           child: Watch(
             (context) {
@@ -119,12 +107,11 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
 
               if (quotes.isEmpty) return noHistoricalQuoteWidget(context);
 
-              // Controlador para sincronizar com a Scrollbar
               final scrollController = ScrollController();
 
               return Scrollbar(
                 controller: scrollController,
-                thumbVisibility: true, // Mantém a barra sempre visível
+                thumbVisibility: true,
                 thickness: 6,
                 radius: const Radius.circular(8),
                 child: ListView.builder(
@@ -175,7 +162,7 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
                           ),
                         ),
                         title: Text(
-                          '${quote.currencyCode}: \$${quote.quoteValue.toStringAsFixed(4)}',
+                          '${quote.currencyCode}: ${CurrencyUtils.getCurrencySymbol(quote.currencyCode)} ${quote.quoteValue.toStringAsFixed(4)}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(formattedDate),
@@ -194,19 +181,19 @@ class _CurrencyListPageState extends State<CurrencyListPage> {
   Widget noHistoricalQuoteWidget(BuildContext context) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center, // Centraliza conteúdo
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(
-            Icons.history, // Ícone condicional
+            Icons.history,
             size: 48,
             color: Colors.grey,
           ),
           const SizedBox(height: 8),
           Text(
-            'Sem cotações históricas registradas', // Mensagem de lista vazia
+            'Sem cotações históricas registradas',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Colors.grey[600],
-                ), // Estilo e cor do texto
+                ),
           ),
         ],
       ),

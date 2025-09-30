@@ -6,13 +6,11 @@ import 'package:http/http.dart' as http;
 class ApiHttpClientService {
   static const Duration _timeout = Duration(seconds: 30);
 
-  // Método genérico para GET requests
   static Future<Map<String, dynamic>> get(
     String url, {
     Map<String, String>? headers,
   }) async {
     try {
-      print("📡 Fazendo requisição GET para a URL: $url");
 
       final response = await http.get(
         Uri.parse(url),
@@ -29,7 +27,6 @@ class ApiHttpClientService {
     }
   }
 
-  // Método genérico para POST requests
   static Future<Map<String, dynamic>> post(
     String url, {
     Map<String, dynamic>? body,
@@ -57,11 +54,8 @@ class ApiHttpClientService {
   static Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return {};
-      print("✅ RESPOSTA DA API RECEBIDA COM SUCESSO!");
       return json.decode(response.body);
     } else {
-      print("❌ ERRO DA API: Status Code: ${response.statusCode}");
-      print("❌ CORPO DA RESPOSTA: ${response.body}");
       switch (response.statusCode) {
         case 400:
           throw ApiException('Requisição inválida');

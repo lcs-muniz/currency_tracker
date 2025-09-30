@@ -1,17 +1,16 @@
 import 'package:currency_tracker/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../domain/entities/currency.dart';
+import 'package:currency_tracker/core/utils/currency_utils.dart';
 
 class CurrencyCard extends StatelessWidget {
   final Currency currency;
   final ValueChanged<bool?>? onFavoriteChanged;
-  // final VoidCallback? onHistoricalQuotesPressed;
 
   const CurrencyCard({
     super.key,
     required this.currency,
     this.onFavoriteChanged,
-    // this.onHistoricalQuotesPressed,
   });
 
   @override
@@ -47,7 +46,6 @@ class CurrencyCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Informações da moeda
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,7 +74,7 @@ class CurrencyCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '\$ ${currency.latestQuote.toStringAsFixed(2)}',
+                        '${CurrencyUtils.getCurrencySymbol(currency.code)} ${currency.latestQuote.toStringAsFixed(2)}',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: theme.colorScheme.secondary,
                           fontWeight: FontWeight.bold,
@@ -86,13 +84,6 @@ class CurrencyCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // IconButton(
-                          //   icon: const Icon(Icons.history),
-                          //   color: theme.colorScheme.primary,
-                          //   tooltip: 'Ver Histórico',
-                          //   onPressed: onHistoricalQuotesPressed,
-                          //   visualDensity: VisualDensity.compact,
-                          // ),
                           IconButton(
                             icon: Icon(
                               isFavorite
@@ -112,12 +103,10 @@ class CurrencyCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
                     ],
                   ),
                 ],
               ),
-              // Mensagem de toque duplo
               Text(
                 'Toque duplo para editar, segure para excluir',
                 style: theme.textTheme.bodySmall?.copyWith(

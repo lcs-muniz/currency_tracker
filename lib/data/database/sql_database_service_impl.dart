@@ -87,15 +87,10 @@ class SqlDatabaseServiceImpl implements IDatabaseService {
       final db = await database;
       final maps = await db.query('currencies');
 
-      
       if (maps.isEmpty) {
         return const Success([]);
       }
-      
-      // if (maps.isEmpty) {
-      //   return Error(DatabaseQueryFailure(
-      //       '${AppMessages.error.databaseQueryError}: Nenhuma moeda encontrada'));
-      // }
+
       final currencies = maps.map(CurrencyMapper.fromMap).toList();
       return Success(currencies);
     } catch (e) {
@@ -146,8 +141,6 @@ class SqlDatabaseServiceImpl implements IDatabaseService {
     }
   }
 
-  // ---------- HistoricalQuote ----------
-
   @override
   Future<HistoricalQuotesResult> getHistoricalQuotes(
       String currencyCode) async {
@@ -157,11 +150,9 @@ class SqlDatabaseServiceImpl implements IDatabaseService {
         'historical_quotes',
         where: 'currency_code = ?',
         whereArgs: [currencyCode],
+        orderBy: 'timestamp DESC',
       );
-      if (maps.isEmpty) {
-        return Error(DatabaseQueryFailure(
-            '${AppMessages.error.databaseQueryError}: Nenhum histórico encontrado'));
-      }
+
       final historicalQuotes = maps.map(HistoricalQuoteMapper.fromMap).toList();
       return Success(historicalQuotes);
     } catch (e) {

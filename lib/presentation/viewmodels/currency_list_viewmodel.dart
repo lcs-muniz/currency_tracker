@@ -2,7 +2,6 @@ import 'package:currency_tracker/domain/facades/i_currency_use_case_facade.dart'
 import 'package:currency_tracker/domain/entities/currency.dart';
 import 'package:currency_tracker/domain/entities/historical_quote.dart';
 import 'package:currency_tracker/presentation/viewmodels/currency_effect_commands.dart';
-import 'package:currency_tracker/test_utils/factories/historical_quote_factory.dart';
 import 'package:currency_tracker/presentation/commands/currency_commands.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
@@ -20,6 +19,7 @@ class CurrencyListController {
       addCmd: AddCurrencyCommand(facade),
       updateCmd: UpdateCurrencyCommand(facade),
       removeCmd: RemoveCurrencyCommand(facade),
+      getQuotesCmd: GetHistoricalQuotesCommand(facade),
     );
   }
 
@@ -64,9 +64,7 @@ class CurrencyListController {
   }
 
   void loadQuotesForCurrency(String code) {
-    final fakeQuotes =
-        HistoricalQuoteFactory.list(currencyCode: code, count: 10);
-    _state.quotes.value = fakeQuotes;
+    _effects.getHistoricalQuotes(code);
   }
 
   Currency? getCurrencyByCode(String code) {
@@ -77,10 +75,8 @@ class CurrencyListController {
     }
   }
 
-  String? consumeSnackMessage() {
-    final msg = _state.snackMessage.value;
+  void clearSnackMessage() {
     _state.snackMessage.value = null;
-    return msg;
   }
 
   void clearSearch() {

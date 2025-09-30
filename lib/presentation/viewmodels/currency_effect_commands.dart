@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:currency_tracker/core/failures/failure.dart';
 import 'package:currency_tracker/core/patterns/command.dart';
+import 'package:currency_tracker/domain/entities/historical_quote.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 import 'package:currency_tracker/domain/entities/currency.dart';
 import 'package:currency_tracker/presentation/commands/currency_commands.dart';
@@ -12,6 +13,7 @@ class CurrencyEffectsCommands {
   final AddCurrencyCommand addCmd;
   final UpdateCurrencyCommand updateCmd;
   final RemoveCurrencyCommand removeCmd;
+  final GetHistoricalQuotesCommand getQuotesCmd;
 
   Currency? _currentCurrency;
   int _lastAccessedIndex = -1;
@@ -25,11 +27,26 @@ class CurrencyEffectsCommands {
     required this.addCmd,
     required this.updateCmd,
     required this.removeCmd,
+    required this.getQuotesCmd,
   }) {
     _observeLoad();
     _observeAdd();
     _observeUpdate();
     _observeRemove();
+    _observeGetQuotes();
+  }
+
+  void _observeGetQuotes() {
+    _observeCommand<List<HistoricalQuote>>(
+      getQuotesCmd,
+      onSuccess: (quotes) {
+        state.quotes.value = quotes;
+      },
+      onFailure: (err) {
+        state.quotes.value = [];
+        print('Erro ao buscar histórico: ${err.msg}');
+      },
+    );
   }
 
   void _observeCommand<T>(
@@ -133,6 +150,11 @@ class CurrencyEffectsCommands {
     }
   }
 
+  Future<void> getHistoricalQuotes(String code) async {
+    state.clearError();
+    await getQuotesCmd.executeWith((code: code));
+  }
+
   void removeCurrencyOptimistic(Currency currency) {
     _deleteTimer?.cancel();
     _deletedCurrency = currency;
@@ -179,6 +201,7 @@ class CurrencyEffectsCommands {
     addCmd.reset();
     updateCmd.reset();
     removeCmd.reset();
+    getQuotesCmd.reset();
   }
 
   AddCurrencyCommand get addCurrencyCommand => addCmd;
